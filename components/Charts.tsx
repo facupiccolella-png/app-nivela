@@ -57,7 +57,7 @@ export const CvpChart: React.FC<ChartsProps> = ({
       return (
         <div className="bg-white/95 backdrop-blur-sm p-4 border border-gray-200 shadow-xl rounded-xl text-sm z-50 min-w-[240px]">
           <p className="font-bold mb-3 border-b border-gray-100 pb-2 text-gray-800">
-            {isMonetary ? `Ventas: ${currencyFormatter(label)}` : `Unidades: ${label}`}
+            {isMonetary ? `Ventas: ${currencyFormatter(label)}` : `Ventas: ${currencyFormatter(dataItem.v)}`}
           </p>
           
           <div className="space-y-2">
@@ -128,7 +128,7 @@ export const CvpChart: React.FC<ChartsProps> = ({
                  {/* Variable Costs (Common) */}
                  <div className="flex items-center justify-between gap-4 text-gray-600">
                    <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-gray-500"></span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-slate-600"></span>
                     <span className="font-medium">Costos Variables (Cv):</span>
                   </div>
                   <span className="font-semibold tabular-nums">{currencyFormatter(dataItem.variableCost)}</span>
@@ -371,4 +371,4 @@ export const CvpChart: React.FC<ChartsProps> = ({
       </ResponsiveContainer>
     </div>
   );
-};
+}
