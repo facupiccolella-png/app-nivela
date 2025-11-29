@@ -18,28 +18,40 @@ import { CvpChart } from './components/Charts';
 
 function App() {
   // --- State ---
-  const [fixedCost, setFixedCost] = useState<number>(80000);
-  const [pricePerUnit, setPricePerUnit] = useState<number>(250);
-  const [variableCostPerUnit, setVariableCostPerUnit] = useState<number>(90);
-  const [targetVolume, setTargetVolume] = useState<number>(620); // User's estimated sales set to 620 to match screenshot
+  // Using number | string to allow empty input fields
+  const [fixedCost, setFixedCost] = useState<number | string>(80000);
+  const [pricePerUnit, setPricePerUnit] = useState<number | string>(250);
+  const [variableCostPerUnit, setVariableCostPerUnit] = useState<number | string>(90);
+  const [targetVolume, setTargetVolume] = useState<number | string>(620); 
   
   const [unitType, setUnitType] = useState<UnitType>(UnitType.PHYSICAL);
   const [graphType, setGraphType] = useState<GraphType>(GraphType.CONTRIBUTION);
 
+  // --- Helper to get safe numbers for calculations ---
+  const getSafeNumber = (val: number | string) => {
+    if (typeof val === 'number') return val;
+    return val === '' ? 0 : parseFloat(val) || 0;
+  };
+
   // --- Calculations ---
   const metrics: AnalysisMetrics = useMemo(() => {
-    const mc = pricePerUnit - variableCostPerUnit; // Contribution margin unit
-    const rc = pricePerUnit !== 0 ? mc / pricePerUnit : 0; // Contribution margin ratio
+    const fc = getSafeNumber(fixedCost);
+    const p = getSafeNumber(pricePerUnit);
+    const v = getSafeNumber(variableCostPerUnit);
+    const t = getSafeNumber(targetVolume);
+
+    const mc = p - v; // Contribution margin unit
+    const rc = p !== 0 ? mc / p : 0; // Contribution margin ratio
 
     // Avoid division by zero or negative margin for break-even
     const validMargin = mc > 0;
     
-    const breakEvenQ = validMargin ? fixedCost / mc : 0;
-    const breakEvenV = breakEvenQ * pricePerUnit;
+    const breakEvenQ = validMargin ? fc / mc : 0;
+    const breakEvenV = breakEvenQ * p;
 
-    const safetyMarginQ = targetVolume - breakEvenQ;
-    const safetyMarginV = safetyMarginQ * pricePerUnit;
-    const safetyMarginPercent = targetVolume > 0 ? (safetyMarginQ / targetVolume) * 100 : (safetyMarginQ < 0 ? -100 : 0);
+    const safetyMarginQ = t - breakEvenQ;
+    const safetyMarginV = safetyMarginQ * p;
+    const safetyMarginPercent = t > 0 ? (safetyMarginQ / t) * 100 : (safetyMarginQ < 0 ? -100 : 0);
 
     return {
       breakEvenQ,
@@ -53,10 +65,15 @@ function App() {
   }, [fixedCost, pricePerUnit, variableCostPerUnit, targetVolume]);
 
   const chartData: SimulationData[] = useMemo(() => {
+    const fc = getSafeNumber(fixedCost);
+    const p = getSafeNumber(pricePerUnit);
+    const v = getSafeNumber(variableCostPerUnit);
+    const t = getSafeNumber(targetVolume);
+
     if (metrics.contributionMarginUnit <= 0) return [];
 
     // Determine range for graph (go up to 2x Break-even or 1.5x target, whichever is larger reasonable)
-    const maxQ = Math.max(metrics.breakEvenQ * 2, targetVolume * 1.5, 100); 
+    const maxQ = Math.max(metrics.breakEvenQ * 2, t * 1.5, 100); 
     const points = 50;
 
     // Use a Set to store unique Q values to avoid duplicates
@@ -73,18 +90,18 @@ function App() {
       qPoints.add(metrics.breakEvenQ);
     }
     // Target volume point
-    if (targetVolume >= 0 && targetVolume <= maxQ * 1.1) {
-      qPoints.add(targetVolume);
+    if (t >= 0 && t <= maxQ * 1.1) {
+      qPoints.add(t);
     }
     
     // Sort points by Q
     const sortedQs = Array.from(qPoints).sort((a, b) => a - b);
     
     return sortedQs.map(q => {
-      const v = q * pricePerUnit;
-      const cvTotal = q * variableCostPerUnit;
-      const ct = fixedCost + cvTotal;
-      const it = v; // Total Revenue
+      const salesV = q * p;
+      const cvTotal = q * v;
+      const ct = fc + cvTotal;
+      const it = salesV; // Total Revenue
       const mcTotal = q * metrics.contributionMarginUnit;
       const ro = it - ct; // Operating Result
 
@@ -104,10 +121,10 @@ function App() {
 
       return {
         q,
-        v,
+        v: salesV,
         totalRevenue: it,
         totalCost: ct,
-        fixedCost: fixedCost,
+        fixedCost: fc,
         variableCost: cvTotal,
         negativeVariableCost: -cvTotal, // Negative for downward plotting
         totalContributionMargin: mcTotal,
@@ -138,13 +155,14 @@ function App() {
   };
 
   // --- Handlers ---
-  const handleInputChange = (setter: React.Dispatch<React.SetStateAction<number>>, value: string) => {
-    // Permitir borrar todo el contenido (valor vacío) tratándolo como 0
+  const handleInputChange = (setter: React.Dispatch<React.SetStateAction<number | string>>, value: string) => {
+    // Permitir valor vacío para mejorar la UX al borrar
     if (value === '') {
-      setter(0);
+      setter('');
       return;
     }
     const num = parseFloat(value);
+    // Solo actualizar si es un número válido y no negativo
     if (!isNaN(num) && num >= 0) setter(num);
   };
 
@@ -152,8 +170,9 @@ function App() {
   const renderRapidAnalysis = () => {
     if (metrics.breakEvenQ === 0) return null;
     
+    const t = getSafeNumber(targetVolume);
     // Calculate percentage difference relative to Break Even point
-    const percentDiff = (targetVolume - metrics.breakEvenQ) / metrics.breakEvenQ;
+    const percentDiff = (t - metrics.breakEvenQ) / metrics.breakEvenQ;
     const isProfit = percentDiff > 0;
     const isBreakeven = Math.abs(percentDiff) < 0.001; // Epsilon for float comparison
 
@@ -280,6 +299,11 @@ function App() {
     return null;
   };
 
+  const currentVolumeSafe = getSafeNumber(targetVolume);
+  const priceSafe = getSafeNumber(pricePerUnit);
+  const fixedCostSafe = getSafeNumber(fixedCost);
+  const variableCostSafe = getSafeNumber(variableCostPerUnit);
+
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 pb-12">
       {/* Header */}
@@ -384,7 +408,7 @@ function App() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Volumen Actual Estimado (Q)</label>
                   <div className="flex items-center justify-between mb-1">
                      <span className="text-xs text-gray-500">0</span>
-                     <span className="text-blue-600 font-bold">{formatNumber(targetVolume)} u</span>
+                     <span className="text-blue-600 font-bold">{formatNumber(currentVolumeSafe)} u</span>
                      <span className="text-xs text-gray-500">Max</span>
                   </div>
                   <input
@@ -392,7 +416,7 @@ function App() {
                     min="0"
                     max={Math.max(metrics.breakEvenQ * 2, 2000)}
                     step="10"
-                    value={targetVolume}
+                    value={currentVolumeSafe}
                     onChange={(e) => handleInputChange(setTargetVolume, e.target.value)}
                     className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                   />
@@ -470,8 +494,8 @@ function App() {
               unitType={unitType}
               breakEvenQ={metrics.breakEvenQ}
               breakEvenV={metrics.breakEvenV}
-              currentVolumeQ={targetVolume}
-              currentVolumeV={targetVolume * pricePerUnit}
+              currentVolumeQ={currentVolumeSafe}
+              currentVolumeV={currentVolumeSafe * priceSafe}
               currencyFormatter={formatCurrency}
             />
 
@@ -512,9 +536,9 @@ function App() {
               />
               <InfoCard 
                 title="Resultado Operativo (Ro)"
-                value={formatCurrency((targetVolume * metrics.contributionMarginUnit) - fixedCost)}
-                subValue={((targetVolume * metrics.contributionMarginUnit) - fixedCost) >= 0 ? "Ganancia" : "Pérdida"}
-                colorClass={((targetVolume * metrics.contributionMarginUnit) - fixedCost) >= 0 ? "text-green-600" : "text-red-600"}
+                value={formatCurrency((currentVolumeSafe * metrics.contributionMarginUnit) - fixedCostSafe)}
+                subValue={((currentVolumeSafe * metrics.contributionMarginUnit) - fixedCostSafe) >= 0 ? "Ganancia" : "Pérdida"}
+                colorClass={((currentVolumeSafe * metrics.contributionMarginUnit) - fixedCostSafe) >= 0 ? "text-green-600" : "text-red-600"}
                 icon={
                   <div className="p-2 bg-green-50 rounded-lg">
                     <Banknote className="h-5 w-5 text-green-500" />
