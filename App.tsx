@@ -58,11 +58,29 @@ function App() {
     // Determine range for graph (go up to 2x Break-even or 1.5x target, whichever is larger reasonable)
     const maxQ = Math.max(metrics.breakEvenQ * 2, targetVolume * 1.5, 100); 
     const points = 50;
-    const step = maxQ / points;
-    
-    const data: SimulationData[] = [];
+
+    // Use a Set to store unique Q values to avoid duplicates
+    const qPoints = new Set<number>();
+
+    // 1. Generate regular interval points (integers for clean grid)
     for (let i = 0; i <= points; i++) {
-      const q = Math.round(i * step);
+      qPoints.add(Math.round((i / points) * maxQ));
+    }
+
+    // 2. Add Critical Points (Exact values to ensure Tooltip snaps to them)
+    // Break-even point
+    if (metrics.breakEvenQ >= 0 && metrics.breakEvenQ <= maxQ * 1.1) {
+      qPoints.add(metrics.breakEvenQ);
+    }
+    // Target volume point
+    if (targetVolume >= 0 && targetVolume <= maxQ * 1.1) {
+      qPoints.add(targetVolume);
+    }
+    
+    // Sort points by Q
+    const sortedQs = Array.from(qPoints).sort((a, b) => a - b);
+    
+    return sortedQs.map(q => {
       const v = q * pricePerUnit;
       const cvTotal = q * variableCostPerUnit;
       const ct = fixedCost + cvTotal;
@@ -84,7 +102,7 @@ function App() {
       const roProfit = ro > 0 ? ro : 0;
       const roLoss = ro < 0 ? ro : 0;
 
-      data.push({
+      return {
         q,
         v,
         totalRevenue: it,
@@ -98,9 +116,8 @@ function App() {
         profitRange,
         roProfit,
         roLoss
-      });
-    }
-    return data;
+      };
+    });
   }, [metrics, fixedCost, pricePerUnit, variableCostPerUnit, targetVolume]);
 
   // --- Formatters ---
@@ -122,6 +139,11 @@ function App() {
 
   // --- Handlers ---
   const handleInputChange = (setter: React.Dispatch<React.SetStateAction<number>>, value: string) => {
+    // Permitir borrar todo el contenido (valor vacío) tratándolo como 0
+    if (value === '') {
+      setter(0);
+      return;
+    }
     const num = parseFloat(value);
     if (!isNaN(num) && num >= 0) setter(num);
   };
