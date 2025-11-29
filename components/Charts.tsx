@@ -155,7 +155,7 @@ export const CvpChart: React.FC<ChartsProps> = ({
   };
 
   return (
-    <div className="w-full h-[600px] bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+    <div className="w-full h-[560px] bg-white rounded-xl shadow-sm border border-gray-200 p-4">
       <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
         {getTitle()}
       </h3>
