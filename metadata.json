@@ -1,0 +1,5 @@
+{
+  "name": "Nivela App",
+  "description": "Herramienta interactiva para el análisis de punto de equilibrio, margen de contribución y gráficas de volumen-costo.",
+  "requestFramePermissions": []
+}
