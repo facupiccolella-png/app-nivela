@@ -183,7 +183,7 @@ export const CvpChart: React.FC<ChartsProps> = ({
             }}
           />
           <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#9ca3af', strokeWidth: 1, strokeDasharray: '4 4' }} />
-          <Legend wrapperStyle={{ paddingTop: '20px' }} verticalAlign="bottom" height={36}/>
+          <Legend wrapperStyle={{ paddingTop: '30px', paddingBottom: '10px' }} verticalAlign="bottom" height={70}/>
 
           {/* Reference Lines */}
           <ReferenceLine y={0} stroke="#9ca3af" strokeWidth={1} />
